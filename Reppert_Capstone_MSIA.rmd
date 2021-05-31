@@ -1,0 +1,1193 @@
+---
+title: |
+  |
+  | Misinformation and Covid-19 in Popular Health Websites
+  |
+  |
+  |
+  | Capstone Project Report:
+author: |
+  | Jeanne Reppert
+  |
+date: |
+  | March 21, 2021
+  |
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+  html_document:
+    df_print: paged
+  word_document: default
+header-includes:
+- \usepackage{titling}
+- \posttitle{\end{center}}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead[R]{Misinformation and Covid-19}
+- \usepackage{float}
+- \floatplacement{figure}{htp}
+subtitle: |
+  | Masters of Science in Informatics and Analytics
+  | University of North Carolina at Greensboro
+geometry: top=3in
+---
+\pagenumbering{gobble}
+\newpage
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#load libraries and function file
+library(knitr)
+library(fs)
+library(tidyverse)
+library(tidytext)
+library(widyr)
+library(tm)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(SnowballC)
+library(stringr)
+library(gridExtra)
+library(igraph)
+library(ggraph)
+library(wordcloud)
+library(plotly)
+library(syuzhet)
+library(lubridate)
+library(quanteda)
+library(readtext)
+library(tidyr)
+library(scales)
+library(RColorBrewer)
+library(scales)
+
+source('Functions MCG article.r')
+```
+
+
+# Abstract
+
+During Covid-19 pandemic, websites providing "alternative" health advice and anti-vaccine messages shifted their focus to Covid-19. Many of these websites now advocate against Covid-19 vaccines and promote other Covid-19 myths, thus fueling the problem of vaccine hesitancy. This project investigates content from three websites (mercola.com, childrenshealthdefense.org, greenmedinfo.com) along with their social media activity. While archives of articles prior to 2020 were scraped, this study more closely investigates articles and posts from January 2020 to December 2020. A variety of criteria were used to select the websites for study including Newsguard, a service that rates websites for their level of adherence to journalistic principles and their inclusion of misinformation. In addition, all Facebook and Twitter posts made by these organizations were also collected through Massmine and CrowdTangle. Network traffic data was collected through Semrush.
+
+Word frequency analysis, word correlations, bigrams and trigrams, and sentiment analysis were employed to confirm that the body of articles studied contained both innocuous health information and a significant concentration Covid-19 misinformation. It was observed that the strategy embraced by these websites utilizes social media platforms to attract subscribers allowing daily information to be shared through email and SMS messaging. While some social media platforms have taken steps to limit the spread of misinformation, all three websites currently have some presence on at least Twitter or Facebook.
+
+In addition to serving as a primary descriptive tool for investigating Covid-19 misinformation during the pandemic, data collected was further utilized to construct machine learning models to discern between articles that spread misinformation and articles that contain information that is generally accepted by the scientific and medical community. An additional website containing a collection of articles about Covid-19 from a variety of news websites which circulate reliable medical information was scraped for this purpose (medscape.com). After tagging and creating a data set of more than 1750 observations, a machine learning model was applied. This model was able to correctly identify articles with both misinformation and reliable medical information with a surprisingly high level of accuracy.
+
+# Introduction
+
+As the Covid-19 pandemic unfolded, the popularity of websites reputed for spreading misinformation has grown significantly. Some attribute this growth to the initial lack of information about the virus and the adjustments that medical professionals have made to public policies as new information was revealed. Distrust has grown as public policies encroached on citizen’s perceived freedoms. Anti-vaxxers, who have strong organizational structures and an existing following, harnessed public distrust to amplify the uncertainty surrounding Covid-19 related policies. Many leaders propagate conspiracy theories and use fear tactics to gain support. Key public health officials and philanthropists such as Anthony Fauci and Bill Gates have been targeted as villains.
+
+Identifying and understanding online medical misinformation is essential for public health governance. In addition to flagging problematic websites and social media posts, public health officials must directly refute conspiracy theories and specific scientific misinformation spread online. Even before the Covid-19 pandemic, the spread of misinformation had been characterized by the utilization of "firehosing", a strategy often used to describe political propaganda whereas much misinformation is disseminated as frequently as possible until it is difficult and even exhausting for the reader to discern between what is true and what is false (Tran, 2019).  Since the beginning of the pandemic, misinformation related to Covid-19 has grown significantly leading concerned researchers to refer to the phenomena as an "infodemic" (Ball & Maxmen, 2020). Currently, with the roll-out of the vaccine over the past few months, vaccine hesitancy, fueled by persistent flow of medical misinformation has become a significant concern (Alexandra S. Levine, 2020). While some suggest censorship and deplatforming as a solution to the growth of medical misinformation, others argue that engaging false narratives about misinformation with sound arguments will more effectively stem the tide of misinformation (Burki, 2020). Thus, a crucial component of engaging these narratives is gaining a thorough understanding of the misinformation narratives that are spread. By observing rhetorical patterns and themes utilized by those who spread misinformation online, a set of standards might be developed to assess websites and rate their reliability and trustworthiness.
+
+This project investigates content from websites known to pass on medical misinformation related to Covid-19 along with their social media activity on Facebook and Twitter. For years, many medical professionals have hosted websites that provide "alternative" health advice and frequently market health related products. During the pandemic, these websites have used issues related to Covid-19 to attract readers and followers. Often the information they share is not widely accepted by the larger medical community and is thus viewed as medical misinformation. Prior to Covid-19, these same websites pressed an anti-vaccine agenda while also offering more innocuous advice about vitamins and broader health related practices. The websites offer a similar anti Covid-19 vaccine message, which is driving the current problem of vaccine hesitancy in response to the push to achieve herd immunity through vaccination.
+
+According to the authors of the United Nations Children’s Fund Vaccine Misinformation Management Field Guide, misinformation is defined as "false information that’s shared by people who don’t realize it is false and don’t mean any harm" while disinformation is "deliberately engineered and disseminated false information with malicious intent or to serve agendas" (Thompson & Finnegan, 2020). While this definition is helpful for a basic understanding of the dynamics of misinformation and disinformation, it still leaves open the question as to who is responsible for defining what exactly false information. For this reason, for the purpose of this study, Covid-19 misinformation will be defined as views or ideas that are generally contradictory to information that is widely accepted by the larger medical and scientific community. Unlike Thompson and Finnegan's definition less emphasis is placed on the motivation of the purveyor of the information (hence the dichotomy between misinformation and disinformation) and more on defining the reliability of that information.
+
+## mercola.com
+
+After documenting a variety of websites containing specific Covid-19 misinformation, three websites were selected to perform an in-depth study of medical misinformation in the context of each website's archived articles. The first website, Mercola.com, is known as one of the largest proponents of "alternative" health information (Mercola.Com - #1 Natural Health Website). His website has published articles since 2008. Mercola earns his living by directing his followers to an online store where vitamins and other health related products are sold. According to Stephen Barrett of Quackwatch.org (Barrett, 2020), Mercola had a net worth in 2017 of more than $100 million. Mercola's website states that he has more than a million subscribers. A typical email subscriber will receive one daily newsletter with links to a few articles. While some articles reference a short description of a supplement or health practice, other articles in the daily newsletter contain information that would typically fall under the category of misinformation including common conspiracy theories, anti-vaccination information, and debunked ideas pertaining to the Covid-19 virus.
+
+Mercola's activities in spreading Covid-19 misinformation have not gone unnoticed by social media platforms or the press. In 2019 a Washington Post article detailed ties held by Mercola to the anti-vaccine community including the National Vaccine Information Center, an organization run by Barbara Loe Fisher, who also shares Covid-19 misinformation regularly on her the NVIC website as well as on various social media platforms including Twitter and Facebook. According to the article, Mercola has donated almost 40 percent of this organization's funding (2.9 million dollars) to support anti-vaccination efforts along with another additional 4 million dollars to support other anti-vaccine advocacy groups (Satija & Sun, 2019). Interestingly, according to its website, NVIC was recently deplatformed from Facebook for spreading misinformation regarding Covid-19 vaccines (National Vaccine Information Center - Your Health. Your Family. Your Choice). Ironically, during the pandemic, Mercola has also received $335,000 in federal pandemic relief loans from the Paycheck Protection Program (the program also granted loans to NVIC, Children's Health Defense and two other organizations reputed to share Covid-19 and vaccine misinformation online (Cowley, 2021).
+
+While claiming to have 1.8 million followers on Facebook, in July of 2019, Mercola announced on his website and Facebook page that he was leaving the platform due to the social media company's privacy policies (Forget Facebook – Take Control of Your Privacy by Dr. Mercola) and encourages his followers to sign up for his daily email newsletter. He currently maintains a platform on YouTube with 378K subscribers, a Twitter account with 289.4K followers, a Telegram account with 4.4k followers and an Instagram account with 286K followers. Mercola's articles are also shared on various other websites including NVIC and Health Nut News (another website that publishes Covid-19 misinformation) run by Erin Elizabeth, who lives with Mercola (Barrett, 2020). Mercola maintains Facebook pages in ten other languages (Facebook’s Algorithm, 2020) including a Spanish language page with more than a million followers. Mercola will release a book titled "The Truth about Covid-19: Exposing the Great Reset, Lock-downs, Vaccine Passports, and the New Normal'' in April of this year (Mercola & Cummings, 2021) which is being presold on several sites including Amazon. The foreword is written by Robert F. Kennedy of Children's Health Defense. NewsGuard, which rates websites based on 9 journalistic standards, gives Mercola's website a score of 35 out of 100 (NewsGuard mercola.com Nutrition Label).
+
+## childrenshealthdefense.org
+
+The second website investigated, Children's Health Defense, was created by Robert F Kennedy, a lawyer known for his work in environmental law and son of the late U.S. Attorney General Robert F. Kennedy. The organization was formerly known as the World Mercury Project (created in 2016) but was changed to CHD in May 2018 (NewsGuard Childrenshealthdefense.Org Nutrition Label). In a study published in January 2020, researchers found that CHD was one of two organizations which were responsible for the largest portion of anti-vaccine advertising on Facebook (Jamison et al., 2020). CHD's news archive, while less extensive than Mercola's, focuses mostly on health issues related to children including vaccinations, the environment, fluoride, and other health-related issues. One study finds that since late 2019, CHD began posting anti 5G information every week (Mostrous, 2020.) Since the pandemic, CHD's content has shifted significantly to subject matter pertaining to Covid-19 misinformation.
+
+CHD maintains an active social media presence with 151.8k Facebook followers, 57.2k followers on Twitter, 203k followers on Instagram, and 42.8k subscribers on their YouTube channel. Additionally, Robert F. Kennedy maintains a personal social media presence on Twitter with 233.9k followers, 312.7k followers on his personal Facebook page, and a smaller presence on his YouTube channel with 2k subscribers. His personal account was recently banned by Instagram because of persistent sharing of misinformation (Iyengar, 2021). CHD's Instagram account however has remained active. In a study of combined Instagram and Facebook posts about medical misinformation, Tortoise Media found that 7% of social media posts are responsible for 80% of measured interactions on the platforms. Of the 156 superspreaders they identified in the combined accounts; Robert F. Kennedy's was found to be the number one superspreader among the 145,000 investigated posts with a combined total followers of 665k who accounted for 486k interactions in the data. Mercola and Erin Elizabeth rated sixth with a combined following of 630k followers and 64k interactions (Super-Spreaders, 2020). NewsGuard assigned CHD's website a score of 12.5 out of 100 (NewsGuard Childrenshealthdefense.Org Nutrition Label).
+
+## greenmedinfo.com
+
+The last website investigated, GreenMedinfo, was created by Sayer Ji, who holds an undergraduate degree in philosophy (Jarry, 2019). The website was created in 2008 and offers a variety of articles written by GreenMedinfo staff and articles reposted by other alternative health websites (NewsGuard GreenMedinfo.Com Nutrition Label.) In March of this year Twitter deleted GreenMedinfo's account after the Center for Countering Digital Hate named GreenMedinfo as one of their top ten anti-vaccine websites (Ji, 2021). Ji still maintains a personal Twitter account with a much smaller following of 9.3k. GreenMedinfo's Facebook page has a total of 536.5k followers, however the last post made on February 26, 2021 claims that only .1% of followers are receiving the posts and encourages followers to join GreenMedinfo on Telegram and MeWe as well as subscribe to its newsletter on the GreenMedinfo website. Currently the Telegram group has 43k members and the MeWe group has 6.6k members. GreenMedinfo's Facebook page claims that their daily newsletter is received by 450k subscribers (GreenMedinfo.Com | Facebook). GreenMedinfo's Instagram account was deleted "without explanation" in September 2020 according to Ji (Ji, 2020) however in a July GreenMedinfo article, Ji states that Instagram had threatened to delete the account because of misinformation related to the Covid-19 pandemic (Ji, 2020). Interestingly, the same article questions whether their LinkedIn account will also be deleted due to censorship however this account only posts a total of 560 followers. NewsGuard assigned the GreenMedinfo website a score of 30 out of 100 (NewsGuard GreenMedinfo.Com Nutrition Label).
+
+After studying the data associated with the above three websites, several observations were made. First, while the articles on the website include a variety of more general health related material, they also promote some very specific anti-vaccination content and content that embraces several common conspiracy theories related to Covid-19. This information is often grouped around a small subset of topics related to Covid-19 including mitigation measures, treatments, origin stories, vaccine efforts, and conspiracy theories related to technology, world domination by technocrats and Covid-19. Second, the strategy embraced by the operators of these websites appears to utilize social media platforms to attract subscribers their sites to share daily information through email and SMS messaging. Additionally, various social media platforms appear to have had some level of success in limiting the spread of misinformation although in many cases misinformation from these websites continues to flow in some capacity. Twitter appears to be less successful in stemming the propagation of misinformation by those who utilize the platform. Although GreenMedinfo's account was recently deleted, Children's Health Defense and Mercola still continue to share a wide variety of Covid-19 misinformation on Twitter and use the platform to direct followers to their websites for more detailed misinformation and stories that feature common conspiracy theories.
+
+# Problem Definition/Hypotheses
+
+Websites that pass on medical misinformation tend to follow a pattern of communication. Most websites have some innocuous articles that pertain to health issues including advice about supplements, healthy eating, exercise, and healthy lifestyles. These articles may be attractive to those who are mildly interested in health topics but not typically drawn to conspiracy theories that stretch the imagination more than the simple idea of trying a vitamin or other supplement. These types of innocuous articles may be a kind of lure or "gateway drug" that draws the user in. Most websites press the viewer to share an email to gain access to articles and once that email is captured, most websites will send a daily news digest that highlights additional reading material. Thus, over time, the user is exposed to a variety of topics including the more nefarious conspiracy theories that would be categorized as medical misinformation. One might expect then to observe in the text data, that during times when uncertainty is more prevalent due to a health crisis, articles may skew more towards current events and during times when uncertainty in public health is less of a concern that topics will skew more towards articles about healthy lifestyles. One may also hypothesize that social media sites, for this type of misinformation, are more utilized to form connections to readers and to draw traffic to the website rather than to necessarily gain converts to the social media site itself. The real value in a tweet or a Facebook post in this case is not necessarily to generate discussion or retweets but to gain clicks that will lead users to the website for the purpose of capturing their email and following up with additional emails and ultimately product advertisements.
+
+# Methods
+
+## Website Selection
+
+After a careful review of the literature regarding online misinformation and its impact on the Covid-19 pandemic, a survey of popular alternative health websites was undertaken. While there are many websites that contain a mixture of political and health related materials, for this study, only websites that focused nearly exclusively on health topics were considered. Lists found on various websites that describe alternative health websites were consulted. Some of these lists included Quackwatch ((Barrett, 2020), and various pages posted on NewsGuard on the Coronavirus Misinformation Tracking Center page (detailed lists and data were formally publicly shared although they are no longer available except by request). Reports published by the Center for Countering Digital Hate were also consulted (counterhate.com). Just this month CCDH just released an additional study which named Joseph Mercola, Robert F. Kennedy, and Sayer Ji as among a list that they identify as the "disinformation dozen", a group that they find is responsible for most of the current vaccine misinformation being spread on social media (The Disinformation Dozen | Center for Countering Digital Hate).
+
+Finally, using Massmine, a collection of tweets was compiled using common hashtags associated with Covid-19 misinformation (#vaccineskill, #nomaskonme,  #scamdemic, #covidhoax, #vaccineinjury,  #nomaskmandates, #Vaxxed2, #nomorelockdowns, #masksdontwork, #vaxxed, #nochip, #learntherisk, #antimask, #BillGates, #plandemic, #stopbillgates, #iwillnotcomply, #Lockdownskill, #nogates, #NoCovidVax, #burnyourmask, #CovidisOver, #nomasks, #endlockdownsnow, #covidiots, #nomask, #HerdImmunity). By following links listed on Twitter posts and investigating the number of responses and followers frequently mentioned websites were identified. Ultimately the resulting data was composed to create a database of 38 websites which included additional information about the individuals who were named as authors of the sites along with key players who were associated with the websites. Twitter and Facebook usernames along with the number of followers and likes for each account were also researched and recorded.
+
+Each website in the database was investigated to gauge the number of articles on the site that were available and the type of content available. Some websites (like NVIC) were eliminated simply because there were few articles that existed on the website while other websites (like HealthNut News by Erin Elizabeth) were eliminated because a larger portion of the articles on the website were reprints from Mercola's website. Finally, other websites were eliminated because their content consisted of mostly videos or "courses" that individuals could enroll in to learn more about the information shared on the website. After applying these criteria, three websites were chosen for scraping and data gathering: mercola.com, childrenshealthdefense.org, and greenmedinfo.com.
+
+## Data Collection
+
+Given the aim of our study was to track changes in web page and social media content during the Covid-19 pandemic, the full corpus of archived articles published by Mercola, CHD, and GreenMedinfo in 2020 were scraped from the websites. Using both RSelenium and rvest packages in r, URLs were identified for potential scraping. Some of the URLs identified had broken links and were eliminated. Additionally, URLs that were not associated with health articles or which contained very little text (either recipes, exercise illustrations or videos) were also omitted. Once these URLs were eliminated, the text body of the article, article date, and article title were scraped and imported into CSV files that contained the url, date, title and text. Because many articles had inconsistencies in the way in which author information was coded, this data was not collected.
+
+CrowdTangle was used to gather all available posts made on the associated Facebook group pages during 2020 and a history of 2020 tweets from each organization were gathered using Massmine. Traffic analysis data was acquired from Semrush.com in the form of csv files of traffic sources and top page traffic. The data was investigated to note patterns and trends in the texts of the website articles and how those compared to the social media content and web page data. Traffic source csv files were compiled and visualized to show monthly website traffic trends along with the top sources for website traffic each month. Top page files were extracted for each month and December's top page file was cleaned and trimmed to visualize articles with the most frequent unique visitors for all three websites during the month of December.
+
+## Data Descriptions
+
+While the entirety of articles from 2008 to 2020 (a total of 8676 articles) were scraped from Mercola's archive of health-related articles, the articles investigated for this paper include those written and posted in 2020. After eliminating non-text website content, this data set included 793 articles with title, date, url, and the full body text of each page.
+
+The collection of Facebook archived posts from CrowTangle are a csv file of 25,027 observations. Variables included number of page likes, number of comments, post likes, other post responses, shared links, videos, number of times videos are viewed, the post text and a score for overperformance. Most posts included range from mid-2009 to August 2019. As of August 20, 2019, Mercola stopped posting on his Facebook page although posts by Mercola are still widely circulated on Facebook. He announced that he was leaving Facebook and includes a link to his website for more information. On his website, he encourages members to subscribe to his email, SMS messages and podcasts for daily information. Just recently, in March 2021, Mercola appeared to resume posting on the Facebook page group. The Twitter data set is a collection of 1943 tweets ranging from January 1, 2020 to December 31, 2020.
+
+A total of 921 articles were scraped from CHD's website ranging from 2005 to 2020 however, only 25 articles were dated before 2017) Once again, for this study only the articles written and posted in 2020 were studied (a total of 568 articles). The CrowdTangle Facebook dataset used for this study contained 3959 observations including the same variables as described above in the Mercola dataset. Post dates begin in September of 2016 and continue through 2020. 786 tweets were collected ranging from January 3, 2020 to December 30, 2020.
+
+Website articles were collected from GreenMedinfo for 2020 and the data resulted in a total of 412 observations. Facebook data collected from Crowdtangle included 23,416 observations with dates ranging from July 2009 through 2020. 519 tweets were collected ranging from August 24, 2017 to January 11, 2021.
+
+## Data Cleaning
+
+A variety of r packages were utilized to clean the resulting data scraped from the three websites as well as Facebook and Twitter text data. Date columns in website, Twitter and Facebook files were parsed using the r package lubridate and a separate column was generated with extracted months for sorting. The text columns were processed to remove numbers, UTF characters, and symbols. The "SMART" stop word list was utilized to remove commonly occurring words in the text column. Additionally, carriage returns, new lines and punctuation were removed, all letters were changed to lowercase, and groups of white space was collapsed to one single space. Finally, a few additional words and some short statements that were included on every article were removed from each data set. Snowballc was then used to stem the text of each dataset and various synonyms used for Covid-19 (Covid-19, SARS-CoV-2, coronavirus etc.) were combined into the term COVID-19.
+
+Twitter data in json files were streamed in using the ndjson package in r and converted to csv files. Columns from the Twitter data included the following information about each post: date (filtered for 2020 tweets), text, user description, total favorites, total followers, total friends, user location, username, screen name, total statuses, tweet mentions, retweet mentions, url, retweet url, and total retweets. 
+
+## Data Analysis Methods
+
+Word frequencies and word correlations were created using tidyr to tokenize and count the text material for articles. The scales package was used to find correlations between the website collections. Sentiment analysis was performed utilizing the syuzhet package. For analysis of Twitter co-occurrences the readtext and quanteda package were used. Wordcloud was used to visualize the top pages ranked by unique visits in the three websites.
+
+## Data Descriptions
+
+While the entirety of articles from 2008 to 2020 (a total of 8676 articles) were scraped from Mercola's archive of health-related articles, the articles investigated for this paper include those written and posted in 2020. After eliminating non-text website content, this data set included 793 articles with title, date, url, and the full body text of each page.
+
+The collection of Facebook archived posts from CrowTangle are a csv file of 25,027 observations. Variables included number of page likes, number of comments, post likes, other post responses, shared links, videos, number of times videos are viewed, the post text and a score for overperformance. Most posts included range from mid-2009 to August 2019. As of August 20, 2019, Mercola stopped posting on his Facebook page although posts by Mercola are still widely circulated on Facebook. He announced that he was leaving Facebook and includes a link to his website for more information. On his website, he encourages members to subscribe to his email, SMS messages and podcasts for daily information. Just recently, in March 2021, Mercola appeared to resume posting on the Facebook page group. The Twitter data set is a collection of 1943 tweets ranging from January 1, 2020 to December 31, 2020.
+
+A total of 921 articles were scraped from Children's Health Defense website ranging from 2005 to 2020 however, only 25 articles were dated before 2017) Once again, for this study only the articles written and posted in 2020 were studied (a total of 568 articles). The CrowdTangle Facebook dataset used for this study contained 3959 observations including the same variables as described above in the Mercola dataset. Post dates begin in September of 2016 and continue through 2020. 786 tweets were collected ranging from January 3, 2020 to December 30, 2020.
+
+Website articles were collected from GreenMedinfo for 2020 and the data resulted in a total of 412 observations. Facebook data collected from Crowdtangle included 23,416 observations with dates ranging from July 2009 through 2020. 3174 tweets were collected ranging from August 24, 2017 to January 11, 2021.
+
+# Observations of Website Data
+
+## Top Words in 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#############################################################################################
+#Load and clean csv files
+
+# read in Mercola 2020 csv file 
+merc <- read.csv(file='mercola.2020.Final.csv', stringsAsFactors=FALSE)
+merc_clean <- tidy(merc)
+# read in Children's Health Defense 2020 csv file 
+CHD <- read.csv(file='CHD.2020.Final.csv', stringsAsFactors=FALSE)
+CHD_clean <- tidy(CHD)
+# read in GreenMedinfo csv file 
+GM <- read.csv(file='greenmed.2020.Final.csv', stringsAsFactors=FALSE)
+GM_clean <- tidy(GM)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#################################################################
+#use visualize_top_words function for three datasets
+
+merc_vtw <- visualize_top_words(merc_clean, 2000, "Mercola")
+CHD_vtw <- visualize_top_words(CHD_clean, 750, "Children's Health Defense")
+GM_vtw <- visualize_top_words(GM_clean, 900, "GreenMedinfo")
+
+```
+
+
+```{r echo=FALSE, fig.width=7, fig.height=3, fig.cap = "Top Words for Website Articles in 2020"}
+
+grid.arrange(merc_vtw, CHD_vtw, GM_vtw, nrow = 1)
+
+```
+
+In 2020, the words "vaccine", "health", and "covid" were the most frequently occurring words in all three collections of website while CHD had significantly more mentions of vaccines. The words "risk" and "death" also are found more frequently in all three datasets. GreenMedinfo and Mercola both appear to have more terms related to general health conditions while Children's Health Defense words appear to focus more around civic issues.
+
+## Top Words in January, July and December
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#################################################################
+#use visualize_top_words function to visualize top words
+
+merc_jan <- merc %>%
+  filter(month == 1)
+merc_jan <- tidy(merc_jan)
+merc_jan_tw <- visualize_top_words(merc_jan, 215, "Mercola Jan.")
+
+merc_jul <- merc %>%
+  filter(month == 7)
+merc_jul <- tidy(merc_jul)
+merc_jul_tw <- visualize_top_words(merc_jul, 260, "Mercola July")
+
+merc_dec <- merc %>%
+  filter(month == 12)
+merc_dec <- tidy(merc_dec)
+merc_dec_tw <- visualize_top_words(merc_dec, 240, "Mercola Dec.")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#################################################################
+#use visualize_top_words function to visualize top words
+
+CHD_jan <- CHD %>%
+  filter(month == 1)
+CHD_jan <- tidy(CHD_jan)
+CHD_jan_tw <- visualize_top_words(CHD_jan, 58, "CHD Jan.")
+
+CHD_jul <- CHD %>%
+  filter(month == 7)
+CHD_jul <- tidy(CHD_jul)
+CHD_jul_tw <- visualize_top_words(CHD_jul, 125, "CHD July")
+
+CHD_dec <- CHD %>%
+  filter(month == 12)
+CHD_dec <- tidy(CHD_dec)
+CHD_dec_tw <- visualize_top_words(CHD_dec, 110, "CHD Dec.")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#################################################################
+#use visualize_top_words function to visualize top words
+
+GM_jan <- GM %>%
+  filter(month == 1)
+GM_jan <- tidy(GM_jan)
+GM_jan_tw <- visualize_top_words(GM_jan, 83, "GM Jan.")
+
+GM_jul <- GM %>%
+  filter(month == 7)
+GM_jul <- tidy(GM_jul)
+GM_jul_tw <- visualize_top_words(GM_jul, 150, "GM July")
+
+GM_dec <- GM %>%
+  filter(month == 12)
+GM_dec <- tidy(GM_dec)
+GM_dec_tw <- visualize_top_words(GM_dec, 130, "GM Dec.")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=5, fig.cap = "Top Words for Website Articles in January, July and December"}
+
+grid.arrange(merc_jan_tw, merc_jul_tw, merc_dec_tw, CHD_jan_tw, CHD_jul_tw, CHD_dec_tw, GM_jan_tw, GM_jul_tw, GM_dec_tw, nrow = 3)
+
+
+```
+
+Throughout 2020 the change in the most frequent words used in the articles posted on the three websites studied shifted notably. While vaccine related words were used predominately previous to the pandemic in January in both CHD and GM's collection the use of the word vaccine increased significantly in Mercola and GM's collection with a slight increase in use in the CHD website. By July the word covid was found to be the top used word and by December it was still at least among one of the top three words used by each website. All three websites both have the word mask rated highly in their collections in July or December. The word health is found consistently among the top words throughout the websites over the three months visualized.
+
+
+## Word Correlations
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+wc<- c("health", "vaccin")
+
+# produce graph comparing 4 select words for each dataset to their most correlated words
+MercWCJan <- visualize_word_cors(merc_jan, wc, "Mercola January", 130)
+MercWCJul <- visualize_word_cors(merc_jul, wc, "Mercola July", 130)
+MercWCDec <- visualize_word_cors(merc_dec, wc, "Mercola December", 130)
+
+chdWCJan <- visualize_word_cors(CHD_jan, wc, "Children's Health Defense January", 40)
+chdWCJul <- visualize_word_cors(CHD_jul, wc, "Children's Health Defense July", 40)
+chdWCDec <- visualize_word_cors(CHD_dec, wc, "Children's Health Defense December", 40)
+
+gmWCJan <- visualize_word_cors(GM_jan, wc, "GreenMedinfo January", 50)
+gmWCJul <- visualize_word_cors(GM_jul, wc, "GreenMedinfo July", 50)
+gmWCDec <- visualize_word_cors(GM_dec, wc, "GreenMedinfo December", 50)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, fig.cap = "Top Correlated Words for Website Articles in January"}
+
+grid.arrange(MercWCJan, chdWCJan, gmWCJan, nrow = 2)
+```
+Top correlated words give more insight into word usage in the articles found in the three websites. In January, previous to the pandemic top words correlated to the words health and vaccine found in the three collections appear to be more neutral in their discussions with more general words frequently mentioned as opposed to specific health conditions or diseases. The once exception to this pattern is found in the Children's Health Defense website which has focused more heavily on vaccine safety throughout its existence. In this collection the word measles is found and specific references to the CDC and FDA are among top correlated words.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, fig.cap = "Top Correlated Words for Website Articles in July"}
+
+grid.arrange(MercWCJul, chdWCJul, gmWCJul, nrow = 2)
+```
+In July there is a notable shift in the correlation between words and their focus in website articles. The vaccine discussion includes references to the pandemic, covid, and even a mention of Bill Gates (gate) and the CDC are included in the discussion. The words risk is now used morel commonly found in reference to health in the GreenMedinfo and Mercola articles while it previously figured highly in Children's Health Defense articles it now is slightly less correlated. The words death, hospital, virus, and covid is found to be correlated with vaccines in GreenMedInfo and Mercola articles in July while the Children's Health Defense website shows the word death to be correlated to vaccines in January but not in July although it is found to be correlated with health in July in CHD's articles.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, fig.cap = "Top Correlated Words for Website Articles in December"}
+
+grid.arrange(MercWCDec, chdWCDec, gmWCDec, nrow = 2)
+```
+
+By December, the correlations between pandemic related words become even more specific. Covid is now highest correlated word in December in all three websites (with vaccine in Mercola and GM and health with CHD). Pfizer is the most correlated word with vaccine in CHD's December articles followed by the FDA and Moderna. Mask, pandemic and death are all highly correlated with vaccine in the Mercola articles in December while pandemic, companies, and technologies are among the top correlated words in the GreenMedinfo articles. Words correlated with the word health now appear to be more specific to the pandemic and words oriented more towards risk and danger.
+
+
+## Comparing Top 5000 Words Across Three Website Collections for 2020
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.cap = "Comparing Website Word Correlations in 2020"}
+merc_clean_top <- merc_clean %>% 
+  count(word, sort = TRUE) %>%
+  mutate(author = "Mercola")
+CHD_clean_top <- CHD_clean %>%
+  count(word, sort = TRUE) %>%
+  mutate(author = "CHD")
+GM_clean_top <- GM_clean %>%
+  count(word, sort = TRUE) %>%
+  mutate(author = "GM")
+
+books <- bind_rows (merc_clean_top[1:5000,],
+          CHD_clean_top[1:5000,],
+          GM_clean_top[1:5000,])
+
+comparison_df <- books %>%
+  add_count(author, wt = n, name = "total_word") %>% 
+  mutate(proportion = n / total_word) %>% 
+  select(-total_word, -n) %>% 
+  pivot_wider(names_from = author, values_from = proportion, 
+              values_fill = list(proportion = 0)) %>%
+  pivot_longer(3:4, names_to = "other", values_to = "proportion")
+
+
+comparison_df %>% 
+  filter(proportion > 1 / 1e5) %>% 
+  ggplot(aes(proportion, `Mercola`)) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(aes(color = abs(`Mercola` - proportion)),
+              alpha = 0.1, size = 2, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) + 
+  scale_x_log10(labels = label_percent()) +
+  scale_y_log10(labels = label_percent()) + 
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") + 
+  facet_wrap(~ other) + 
+  guides(color = FALSE)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.cap = "Comparing Website Word Correlations in 2020"}
+
+books2 <- bind_rows (CHD_clean_top[1:5000,],
+          merc_clean_top[1:5000,],
+          GM_clean_top[1:5000,])
+
+comparison_df2 <- books %>%
+  add_count(author, wt = n, name = "total_word") %>% 
+  mutate(proportion = n / total_word) %>% 
+  select(-total_word, -n) %>% 
+  pivot_wider(names_from = author, values_from = proportion, 
+              values_fill = list(proportion = 0)) %>%
+  pivot_longer(2:3, names_to = "other", values_to = "proportion")
+
+
+comparison_df2 %>% 
+  filter(proportion > 1 / 1e5) %>% 
+  ggplot(aes(proportion, `GM`)) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(aes(color = abs(`GM` - proportion)),
+              alpha = 0.1, size = 2, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) + 
+  scale_x_log10(labels = label_percent()) +
+  scale_y_log10(labels = label_percent()) + 
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") + 
+  facet_wrap(~ other) + 
+  guides(color = FALSE)
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor_CHD_Merc <- cor.test(data = filter(comparison_df, other == "CHD"),
+         ~ proportion + `Mercola`)
+cor_GM_Merc <- cor.test(data = filter(comparison_df, other == "GM"),
+         ~ proportion + `Mercola`)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor_CHD_GM <- cor.test(data = filter(comparison_df2, other == "CHD"),
+         ~ proportion + `GM`)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=8, fig.cap = "Correlation of Words Between Mercola and Children's Health Defense"}
+
+cor_CHD_Merc
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=8, fig.cap = "Correlation of Words Between Mercola and GreenMedinfo"}
+
+cor_GM_Merc
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=8, fig.cap = "Correlation of Words Between Children's Health Defense and GreenMedinfo"}
+
+cor_CHD_GM
+
+```
+Correlated words for the three websites tend to most correlated around covid, vitamin, and research while words like people, risk, test, data and evidence were also among the more correlated words between documents. Words around the center line tend to revolve around mostly health related words like nutrients, and words related to physiology and disease. All three texts appear to be highly correlated in their words counts, with the lowest correlation between Mercola and GreenMedinfo being 0.7632147 and the highest correlation between Children's Health Defense and GreenMedinfo articles being 0.8956503. The correlation between Children's Health Defense and GreenMedinfo was 0.8032828.
+
+
+## Sentiment Analysis
+
+### mercola.com
+
+```{r fig.width = 7, fig.height = 5, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for Website Articles in the 4th Quarter"}
+
+merc_4Q_wc <- merc %>%
+  filter(month == 10:12)
+set.seed(234)
+#use word cloud function to display Mercola Sentiment word cloud for 4th Quarter
+cloud_Merc_4Q <- word_cloud_text(merc_4Q_wc, "Mercola Articles - Sentiment for 4th Quarter in 2020", 200)
+
+```
+
+Sentiment wordclouds help to capture the approach to Covid-19 discussions within the articles collected. The wordcloud for Mercola's 4th quarter articles capture a sentiment of disgust for words like vaccine, vaccination,covid and Facebook. The words great and reset in the anger grouping refer to a discussion of a world program that in health website circles is thought of a conspiracy by technocrats to gain world domination.
+
+#### childrenshealthdefense.org
+
+```{r fig.width = 7, fig.height = 5, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for CHD Articles in 4th Quarter"}
+
+chd_4Q_wc <- CHD %>%
+  filter(month == 10:12)
+set.seed(234)
+#use word cloud function to display CHD Sentiment word cloud for 4th Quarter
+cloud_chd_4Q <- word_cloud_text(chd_4Q_wc, "CHD Articles - Sentiment for 4th Quarter in 2020", 4)
+
+```
+In the wordcloud for Children's Health Defense, in contrast, the word vaccine is not present. However cov (covid) is present with the disgust category as is mentions of the FDA. The word peg in the disgust category reference an ingredient that is used in Covid-19 vaccines that some claim will cause many allergic reactions with the vaccine roll-out. The word pct refers to the type of lab test used to detect Covid-19 which some misinformation websites believe has been misused to create a "plandemic."
+
+### greenmedinfo.com
+
+
+```{r fig.width = 7, fig.height = 5, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for GreenMedinfo Articles in the 4th Quarter"}
+
+gm_4Q_wc <- GM %>%
+  filter(month == 9:12)
+set.seed(12345)
+#use word cloud function to display GreenMedinfo Sentiment word cloud for 4th Quarter
+cloud_gm_4Q <- word_cloud_text(gm_4Q_wc, "GM Articles - Sentiment for 4th Quarter in 2020", 200)
+
+```
+
+Of interest in the GreenMedinfo wordcloud are the reference to the CDC in the fear category as well as the reference to the FDA in the surprise category. While the word lock-down is found in the anticipation category words related to vaccines are not found.
+
+# Social Media Analysis - Facebook Data 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# read in csv file as tibble/data frame, select and rename columns to be used
+Mercola_FB <- as.tibble(read.csv(file='Mercola Full 2020 FB.csv', stringsAsFactors=FALSE)) %>%
+  select(Created, Type, Likes, Comments, Shares, URL, Message, Link, Link.Text, Description) %>%
+  rename(Date = Created, Post_Type = Type, url = URL, Link_Text = Link.Text)
+ 
+#format date column and create a year, month, and day column
+  Mercola_FB$Date <- as.Date(Mercola_FB$Date)
+  Mercola_FB$Year <- year(Mercola_FB$Date)
+  Mercola_FB$Month <- month(Mercola_FB$Date)
+  Mercola_FB$Day <- day(Mercola_FB$Date)
+  
+#filter for 2019 because of lack of activity
+  Mercola_FB <- Mercola_FB %>%
+    filter(Year == 2019)
+
+#covert year and month columns to factor  
+  Mercola_FB$Year <- as.factor(Mercola_FB$Year)
+  Mercola_FB$Month <- as.factor(Mercola_FB$Month)
+  Mercola_FB$Day <- as.factor(Mercola_FB$Day)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#explore posts, likes, comments and shares for 2019
+Mercola_FB_Posts <- ggplot(data = Mercola_FB,
+         mapping = aes(x = Month)) +
+    theme(axis.text.x=element_blank()) +
+    geom_bar(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("Mercola Facebook Posts for 2019") +
+    theme(plot.title = element_text(size = 10, face = "bold"))
+
+  Mercola_FB_Likes <- ggplot(data = Mercola_FB,
+         mapping = aes(x = Month, 
+                       y = Likes)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("Mercola Facebook Likes for 2019") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+  
+  
+  Mercola_FB_Shares <- ggplot(data = Mercola_FB,
+         mapping = aes(x = Month, 
+                       y = Shares)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("Mercola Facebook Shares for 2019") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+
+  Mercola_FB_Comments <- ggplot(data = Mercola_FB,
+         mapping = aes(x = Month, 
+                       y = Comments)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("Mercola Facebook Comments for 2019 by Month") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+```
+
+#### Mercola Facebook Posts, Likes, Comments, and Shares for 2019
+
+Because Mercola cease to post on his Facebook page in August, 2019 investigating data for 2020 was not possible. Mercola data during the first half of the 2019 illustrates his final activity on Facebook. Mercola's post activity remains relatively steady in 2019 with a small decrease between March and June. There is a gap of posts in July followed by slightly more posts in August. After the activity in August, there are no more posts for 2019. Overall, likes drop quite a bit in the first two months  of 2019 and then fall at a greater rate the following four months. Comments decrease as well following a similar pattern. With the exception of a single peak in June, shares decrease significantly as well.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4}
+grid.arrange(Mercola_FB_Posts, Mercola_FB_Likes, Mercola_FB_Comments, Mercola_FB_Shares, nrow = 2)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# read in csv file as tibble/data frame, select and rename columns to be used
+CHD_FB <- as.tibble(read.csv(file='CHD FB.csv', stringsAsFactors=FALSE)) %>%
+  select(Created, Type, Likes, Comments, Shares, URL, Message, Link, Link.Text, Description) %>%
+  rename(Date = Created, Post_Type = Type, url = URL, Link_Text = Link.Text)
+ 
+#format date column and create a year, month, and day column
+  CHD_FB$Date <- as.Date(CHD_FB$Date)
+  CHD_FB$Year <- year(CHD_FB$Date)
+  CHD_FB$Month <- month(CHD_FB$Date)
+  CHD_FB$Day <- day(CHD_FB$Date)
+  
+#filter for 2020
+  CHD_FB <- CHD_FB %>%
+    filter(Year == 2020)
+
+#covert year and month columns to factor  
+  CHD_FB$Year <- as.factor(CHD_FB$Year)
+  CHD_FB$Month <- as.factor(CHD_FB$Month)
+  CHD_FB$Day <- as.factor(CHD_FB$Day)
+  
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#explore posts, likes, comments and shares for 2020
+CHD_FB_Posts <- ggplot(data = CHD_FB,
+         mapping = aes(x = Month)) +
+    theme(axis.text.x=element_blank()) +
+    geom_bar(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("CHD Facebook Posts for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold"))
+
+  CHD_FB_Likes <- ggplot(data = CHD_FB,
+         mapping = aes(x = Month, 
+                       y = Likes)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("CHD Facebook Likes for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+  
+  CHD_FB_Shares <- ggplot(data = CHD_FB,
+         mapping = aes(x = Month, 
+                       y = Shares)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("CHD Facebook Shares for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+
+  CHD_FB_Comments <- ggplot(data = CHD_FB,
+         mapping = aes(x = Month, 
+                       y = Comments)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("CHD Facebook Comments for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+```
+
+#### Children's Health Defense Facebook Posts, Likes, Comments, and Shares for 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4}
+grid.arrange(CHD_FB_Posts, CHD_FB_Likes, CHD_FB_Comments, CHD_FB_Shares, nrow = 2)
+```
+
+Posts on the Children's Health Defense Facebook page remain fairly consistent through out the year. There is a notable drop in comments for 2020 after January along with a steady drop in likes and shares throughout 2020.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# read in csv file as tibble/data frame, select and rename columns to be used
+GM_FB <- as.tibble(read.csv(file='Green Med FB.csv', stringsAsFactors=FALSE)) %>%
+  select(Created, Type, Likes, Comments, Shares, URL, Message, Link, Link.Text, Description) %>%
+  rename(Date = Created, Post_Type = Type, url = URL, Link_Text = Link.Text)
+ 
+#format date column and create a year, month, and day column
+  GM_FB$Date <- as.Date(GM_FB$Date)
+  GM_FB$Year <- year(GM_FB$Date)
+  GM_FB$Month <- month(GM_FB$Date)
+  GM_FB$Day <- day(GM_FB$Date)
+  
+#filter for 2020 
+  GM_FB <- GM_FB %>%
+    filter(Year == 2020)
+
+#covert year and month columns to factor  
+  GM_FB$Year <- as.factor(GM_FB$Year)
+  GM_FB$Month <- as.factor(GM_FB$Month)
+  GM_FB$Day <- as.factor(GM_FB$Day)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#explore posts, likes, comments and shares for 2016
+GM_FB_Posts <- ggplot(data = GM_FB,
+         mapping = aes(x = Month)) +
+    theme(axis.text.x=element_blank()) +
+    geom_bar(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("GM Facebook Posts for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold"))
+
+  GM_FB_Likes <- ggplot(data = GM_FB,
+         mapping = aes(x = Month, 
+                       y = Likes)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("GM Facebook Likes for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+  
+  GM_FB_Shares <- ggplot(data = GM_FB,
+         mapping = aes(x = Month, 
+                       y = Shares)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("GM Facebook Shares for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+
+  GM_FB_Comments <- ggplot(data = GM_FB,
+         mapping = aes(x = Month, 
+                       y = Comments)) +
+    theme(axis.text.x=element_blank()) +
+    geom_col(alpha = .7) +
+    facet_wrap(~Year) +
+    ggtitle("GM Facebook Comments for 2020") +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    scale_y_continuous(labels = comma)
+```
+
+#### GreenMedinfo Facebook Posts, Likes, Comments, and Shares for 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4}
+grid.arrange(GM_FB_Posts, GM_FB_Likes, GM_FB_Comments, GM_FB_Shares, nrow = 2)
+```
+GreenMedinfo's posts drop significantly after the the first quarter for 2020 followed by a slight increase over the summer with another drop in November and December. A similar pattern is also noted for posts, likes, comments, and shares with very little activity noted in November and December.
+
+## Visualization of CHD FB Posts: Top Words for 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+CHD_Clean_FB <- chd_FBclean_text(CHD_FB)
+GM_Clean_FB <- gm_FBclean_text(GM_FB)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#use function to visualize top words in FB files
+CHDFB2020vtw <- visualize_top_words(CHD_Clean_FB, 130, "CHD Posts 2020")
+GMFB2020vtw <- visualize_top_words(GM_Clean_FB, 80, "GM Posts 2020")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=3, fig.cap = "Top Words for 2020 FB Posts"}
+grid.arrange(CHDFB2020vtw, GMFB2020vtw, nrow = 1)
+
+```
+
+Because Mercola did not have posts in 2020, only posts for Children's Health Defense and GreenMedinfo are investigated. Top words in posts for Children's Health Defense show a lot of discussion around the top of covid and vaccines with health and children still among the most common words in posts. Interestingly in GreenMedinfo's posts, the words newsletter, join, gift, free, sign, telegram, and subscribe all appear to point to a push on Facebook by GreenMedinfo to encourage Facebook followers to either sign up for GreenMedinfo's newsletter or to join GreenMedinfo on Telegram in order to avoid Facebook's censorship of GreenMedinfo's posts.
+
+```{r echo=FALSE, fig.cap="GreenMedInfo FB Post", out.width = '50%'}
+knitr::include_graphics("GM Telegram Illustration.png")
+```
+
+
+
+## Top Correlated Words for Facebook Posts in 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#create list of top words from last visulaization
+topFB2020Words <- c("covid", "vaccin")
+
+# produce graph comparing covid, health and vaccine for each dataset to their most correlated words
+
+CHDFBWC <- FB_visualize_word_cors(CHD_Clean_FB, topFB2020Words, "CHD Correlated Words for FB", 5)
+GMFBWC <- FB_visualize_word_cors(GM_Clean_FB, topFB2020Words, "GM Correlated Words for FB", 5)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=5, fig.cap = "Top Words for 2020 FB Posts"}
+grid.arrange(CHDFBWC, GMFBWC, nrow = 2)
+```
+Children's Health Defense posts show a correlation between the word covid and Anthony Fauci and the Moderna vaccine. The words injury, safety and trial appear to be closely associated with mentions of the word vaccine in CHD posts. In GreenMedinfo posts the website "questioningcovid.com" which offers further Covid-19 misinformation is correlated frequently with the word covid and along with the word lock-down. Vaccine discussions appear to have words that are highly correlated with Bill Gates (gate) and the words mandatory, force, consent, and control implying possible concern that the Covid-19 might be forced upon the public. Just recently, CHD has encouraged its users to switch to MeWe in order to avoid censorship on other social media websites.
+
+
+##Sentiment Analysis for Facebook Posts
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for Facebook Posts"}
+
+#use word cloud function to display Children's Health Defense FB Sentiment Wordcloud for 2020
+set.seed(12345)
+FBwcCHD2020 <- FB_word_cloud(CHD_FB, "Children's Health Defense FB Sentiment", 20)
+
+```
+
+The wordcloud create with Children's Health Defense Facebook posts illustrates posts that encourage users to sign up for a news letter called the Defender with words in the anticipation category including free, sign, news, and email. This is a regular posting for CHD and although posts by CHD don't appear to be censored (although possibly shadow-banned) there are multiple posts that encourage users to have CHD news sent directly to their email. Just recently, CHD has encouraged its users to switch to MeWe in order to avoid censorship on other social media websites.
+
+```{r echo=FALSE, fig.cap="CHD Facebook Posts", out.width = '50%'}
+knitr::include_graphics("CHD FB Defender Illustration.png")
+knitr::include_graphics("CHD FB MW Illustration.png")
+```
+
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for Facebook Posts"}
+#use word cloud function to display GreenMedinfo FB Sentiment Wordcloud for 2020
+set.seed(123)
+FBwcGM2020 <- FB_word_cloud(GM_FB, "GreenMedinfo FB Sentiment Wordcloud for 2020", 20)
+```
+
+GreenMedinfo's web page demonstrates both the wordiness of their Facebook posts and also the regular presence of an invitation to subscribe to their newsletter in order to receive a free gift (a 500 page document). The word telegram is found in the trust category.
+
+
+```{r echo=FALSE, fig.cap="GreenMedinfo Facebook Post", out.width = '50%'}
+knitr::include_graphics("GM FB Post Newsletter.png")
+```
+
+# Social Media Analysis - Twitter Data
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#read in Mercola Twitter CSV's
+Mercola_TW_2020 <- as.tibble(read.csv(file='mercolatweets2020.csv'))
+
+#format date column and create a month, and day column
+
+  Mercola_TW_2020$month <- month(Mercola_TW_2020$date)
+  Mercola_TW_2020$month <- as.factor(Mercola_TW_2020$month)
+  Mercola_TW_2020$day <- day(Mercola_TW_2020$date)
+  Mercola_TW_2020$day <- as.factor(Mercola_TW_2020$day)
+  
+  #read in Children's Health Defense Twitter CSV's
+CHD_TW_2020 <- as.tibble(read.csv(file='chdtweets2020.csv'))
+
+#format date column and create a month, and day column
+
+  CHD_TW_2020$month <- month(CHD_TW_2020$date)
+  CHD_TW_2020$month <- as.factor(CHD_TW_2020$month)
+  CHD_TW_2020$day <- day(CHD_TW_2020$date)
+  CHD_TW_2020$day <- as.factor(CHD_TW_2020$day)
+  
+#read in GreenMedinfo Twitter CSV's
+GM_TW_2020 <- as.tibble(read.csv(file='GMtweets2020.csv'))
+
+#format date column and create a month, and day column
+
+  GM_TW_2020$month <- month(GM_TW_2020$date)
+  GM_TW_2020$month <- as.factor(GM_TW_2020$month)
+  GM_TW_2020$day <- day(GM_TW_2020$date)
+  GM_TW_2020$day <- as.factor(GM_TW_2020$day)
+
+```
+
+## Tweets by Month for 2020
+
+Mercola's tweets peaked in the beginning of 2020 with roughly 250 tweets or more for the first three months of 2020. In April, his tweets dropped significantly and stayed low during May. In June, tweets peaked once again followed by a drop in tweets for July and August. September tweets neared the level of Mercola's tweets in the first quarter but again dropped the following two months. Tweets in November and December were also relatively low. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ #generate plot of number of tweets per month for each Twitter account
+Merc_Tw_Count <- ggplot(Mercola_TW_2020, aes(x = month)) + 
+  ggtitle("Mercola Tweets in 2020") +
+  geom_bar()
+
+CHD_Tw_Count <- ggplot(CHD_TW_2020, aes(x = month)) + 
+  ggtitle("CHD Tweets in 2020") +
+  geom_bar()
+
+GM_Tw_Count <- ggplot(GM_TW_2020, aes(x = month)) + 
+  ggtitle("GM Tweets in 2020") +
+  geom_bar()
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=2, fig.cap = "Tweet Count by Month for 2020"}
+grid.arrange(Merc_Tw_Count, CHD_Tw_Count, GM_Tw_Count, nrow = 1)
+```
+
+Mercola's tweets on Twitter decrease in 2020, particularly after the pandemic begins. However, he is still averaging more than a few tweets a day. Children's Health Defense tweets more than double in 2020 over the year. GreenMedinfo's tweets are the fewest of the three websites with some decreases in tweets towards the end of 2020 particularly in November.
+
+
+## Top Words for Tweets in 2020
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#cleaning tweet text in the same way FB Message was cleaned
+Mercola_TW_2020$Message <- Mercola_TW_2020$text
+MTW_2020_Clean <- mercola_FBclean_text(Mercola_TW_2020)
+
+CHD_TW_2020$Message <- CHD_TW_2020$text
+CHDTW_2020_Clean <- chd_FBclean_text(CHD_TW_2020)
+
+GM_TW_2020$Message <- GM_TW_2020$text
+GMTW_2020_Clean <- gm_FBclean_text(GM_TW_2020)
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#use function to visualize top words in the tweet files
+MTW2020vtw <- visualize_top_words(MTW_2020_Clean, 55, "Mercola Tweets 2020")
+CHDTW2020vtw <- visualize_top_words(CHDTW_2020_Clean, 25, "CHD Tweets 2020")
+GMTW2020vtw <- visualize_top_words(GMTW_2020_Clean, 18, "GM Tweets 2020")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=3, fig.cap = "Top Words for 2020 Tweets"}
+grid.arrange(MTW2020vtw, CHDTW2020vtw, GMTW2020vtw, nrow = 1)
+```
+
+For the top words found in 2020 Mercola tweets, covid is the highest ranked with significantly more mentions than any other word. The phrase "stopcovidcold" is the third most frequent "word." This phrase is a reference to another Mercola website by the same name. This website contains information that exclusively addresses purported ways to avoid contracting Covid-19 by taking supplements to "boost" the immune system or disputed ways to treat Covid-19 once it is contracted. The website is rather sparse but still features Mercola and four other colleagues. A handful of article links on the website point the reader back to Mercola's website archive. Health is still a word that is frequently used along with vitamin and research. This is similar to findings in the articles and Facebook posts. Likewise, the word vaccine also appears relatively frequently. Several words (free, article, link) imply that messages are pointing followers back to articles on Mercola's website.
+
+Children's Health Defense also shows frequent discussion of Covid-19 along with vaccines. The reference to robertkennedyjr is a frequently user name that CHD tweets and retweets to. This is the founder's personal twitter which also shares CHD articles on a regular basis. GreenMedinfo also appears to have multiple mentions of vaccines and covid along with mentions of YouTube and videos. These words appear to point to regular live videos that were shared on Twitter. The word mask is also among one the most tweeted words.
+
+
+## Sentiment Analysis for Mercola 2020 Tweets
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for 2020 Mercola Tweets"}
+
+#use word cloud function to display Mercola Tweet Sentiment word cloud
+set.seed(123)
+TWwcMerc2020 <- FB_word_cloud(Mercola_TW_2020, "Mercola Tweet Sentiment - 2020", 10)
+
+
+```
+
+Mercola tweets for 2020 show some mention of covid and covid related words, however a lot of content has more to do with getting readers to move to receiving a newsletter as well as clicking through to articles on his website. Once readers click through the tweet they will have to register their email in order to view the article. The words message and content  is a reference to notices throughout many Mercola's tweets that Twitter has hidden his content. His tweets encourage users to click through the post in order to be able to access the censored content which is typically a link to his website. 
+
+```{r echo=FALSE, fig.cap="Mercola Tweet", out.width = '50%'}
+knitr::include_graphics("Mercola Twitter Content Ban.png")
+```
+
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for 2020 Children's Health Defense Tweets"}
+
+#use word cloud function to display Children's Health Defense Tweet Sentiment word cloud for 2020
+set.seed(456)
+TWwcCHD2020 <- FB_word_cloud(CHD_TW_2020, "Children's Health Defense Tweet Sentiment", 10)
+
+```
+
+Children's Health Defense tweets refer to their followers as "Health Freedom Advocates" and these three words found in the wordcloud reference to frequent mentions in tweets that encourage their followers to take action against the numerous issues that CHD tweets about. Interestingly, Fauci is found in the sadness category. The CDC, vaccines, shot, and Trump are among words mentioned in the surprise category.
+
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "Sentiment Analysis for 2020 GreenMedinfo Tweets"}
+
+#use word cloud function to display GreenMedinfo Tweet Sentiment word cloud for 2020
+set.seed(123)
+TWwcGM2020 <- FB_word_cloud(GM_TW_2020, "GreenMedinfo Tweet Sentiment", 20)
+
+```
+GreenMedinfo's tweets appear to have more content revolving around covid with negative mentions of covid related words. Mask and face are mentioned in fear suggesting the presence of anti-mask messages. Vaccine falls in the surprise category. Covid, censor, test and other virus related words are found in the disgust category. 
+
+
+## Co-occurrence Graphs for 2020 Tweets
+
+### mercola.com
+
+The co-occurrence graphs for Mercola 2020 tweets also highlight the idea that messaging surrounding content is two-fold: one center of the hashtags refers to nutrition and health living topics while the other center refers to issues surrounding Covid-19 with some references to GMO issues.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# read in csv file of tweets
+mtweets.data <- readtext('mercolatweets2020.csv', text_field='text')
+Mercola_hashtag_plot <- tw_hashtag_graph(mtweets.data, 100)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Hashtag Co-occurance Graphs for 2020 Mercola Tweets"}
+Mercola_hashtag_plot
+```
+
+The co-occurrence graphs for Mercola 2020 tweets also highlight the idea that messaging surrounding content is two-fold: one center of the hashtags refers to nutrition and health living topics while the other center refers to issues surrounding Covid-19 with some references to GMO issues.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# create user plot
+Mercola_user_plot <- tw_user_graph(mtweets.data, 80)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "User Co-occurance Graphs for 2020 Mercola Tweets"}
+Mercola_user_plot
+```
+
+The co-occurrence graphs for Mercola 2020 tweets highlight individuals who Mercola interacts with frequently. Robert Kennedy Jr. (with website "childrenshd") is known as a prominent anti-vaxxer whose website communicates similar medical misinformation. Frequently, Kennedy's and Mercola's website content refers to the other. "Annagoo_" is frequently referenced with the stopcovid website/twitter handle.
+
+### childrenshealthdefense.com
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# read in csv file of tweets
+chdtweets.data <- readtext('chdtweets2020.csv', text_field='text')
+CHD_hashtag_plot <- tw_hashtag_graph(chdtweets.data, 50)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Hashtag Co-occurance Graphs for 2020 Children's Health Defense Tweets"}
+CHD_hashtag_plot
+```
+
+Children's Health Defense hashtags and their connections highlight the frequent subjects that are tweeted. Covid-19 and vaccines are mentioned frequently along with mentions of Bill Gates, Modern,  and Pfizer. Environmental topics, another interest of the website are mentioned in hashtags as well although now quite as frequently. The hashtag "thedefender" is a reference to the newsletter emailed daily which is mentioned frequently in tweets.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# create user plot
+CHD_user_plot <- tw_user_graph(chdtweets.data, 60)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "User Co-occurance Graphs for 2020 Children's Health Defense Tweets"}
+CHD_user_plot
+```
+User mentions fall along political lines with one grouping of  several senators as well as a few other users with similar views of the pandemic and vaccines. 
+
+### greenmedinfo.com
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# read in csv file of tweets
+gmtweets.data <- readtext('gmtweets2020.csv', text_field='text')
+gm_hashtag_plot <- tw_hashtag_graph(gmtweets.data, 80)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Hashtag Co-occurance Graphs for 2020 GreenMedinfo Tweets"}
+gm_hashtag_plot
+```
+GreenMedInfo uses fewer hashtags although they appear to be more focused to issues related to Covid-19 misinformation. The resulting hashtag plot serves as an interesting list for common Covid-19 conspiracy theories including #plandemic, #endthelockdown, and #billgatesforprison.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# create user plot
+gm_user_plot <- tw_user_graph(gmtweets.data, 80)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, fig.cap = "User Co-occurance Graphs for 2020 GreenMedinfo Tweets"}
+gm_user_plot
+```
+GreenMedinfo appears to tweet at a few political figures as well as Children's Health Defense. Dr. Judy Mikovits is a controversial figure in the anti-vaccine movement who helped to produce the Plandemic video. She is frequently referred to in articles by all three websites.
+
+# Observations of Semrush Data
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#read in traffic source data
+traffic <- read.csv(file = "Traffic_Source_Type.csv")
+
+#Mercola Traffic Source Data
+traffic$Merc_Paid <- gsub("n/a", 0, traffic$Merc_Paid)
+traffic$Merc_Paid <- as.numeric(as.character(traffic$Merc_Paid))
+
+## filter for year 2020
+traffic <- traffic %>%
+  filter(Year == 2020)
+
+## change month and year to factor
+traffic$Month <- as.factor(traffic$Month)
+traffic$Year <- as.factor(traffic$Year)
+
+#convert rows to columns and total by month and plot
+merc_traffic <- traffic %>% select(Merc_Direct, Merc_Referral, Merc_Paid, Merc_Social, Merc_Search, Month) %>%
+  pivot_longer(., cols = c(Merc_Direct,Merc_Referral,Merc_Paid,Merc_Social,Merc_Search),
+               names_to = "Var", values_to = "Val")
+
+
+
+Merc_Traffic_Plot <-ggplot(merc_traffic, aes(Month, Val)) +
+  geom_bar(stat = "identity", aes(fill = Var), position = "stack") +
+  xlab("Months") + ylab("Count") +
+  labs(title = "Mercola Traffic Source",
+              subtitle = "(Paid category totaled 31,289 for the year and was too small to plot)") +
+  theme_bw() +
+  scale_y_continuous(labels = comma)
+
+t <-  merc_traffic %>% 
+  group_by(Var) %>% 
+  summarise(Val = sum(Val))
+
+##Merc_Paid = 31289, not showing on graph
+
+```
+
+```{r fig.width = 7, fig.height = 3, echo=FALSE, warning=FALSE, fig.cap = "Website Traffic Sources for Mercola Website"}
+Merc_Traffic_Plot
+```
+Traffic to Mercola's website appears to have slowed over 2020. While traffic from direct sources appears to be relatively steady, traffic from searches has decreased steadily. Traffic from referrals and social media appears to remain the same throughout the year.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+###Children's Health Defense Traffic Source Data
+
+traffic$CHD_Paid <- as.numeric(traffic$CHD_Paid)
+traffic$CHD_Referral <- as.numeric(as.character(traffic$CHD_Referral))
+traffic$CHD_Direct <- as.numeric(as.character(traffic$CHD_Direct))
+traffic$CHD_Search <- as.numeric(as.character(traffic$CHD_Search))
+traffic$CHD_Social <- as.numeric(as.character(traffic$CHD_Social))
+
+
+#convert rows to columns and total by month and plot
+CHD_traffic <- traffic %>% select(CHD_Direct, CHD_Referral, CHD_Paid, CHD_Social, CHD_Search, Month) %>%
+  pivot_longer(., cols = c(CHD_Direct,CHD_Referral,CHD_Paid,CHD_Social,CHD_Search),
+               names_to = "Var", values_to = "Val")
+
+CHD_Traffic_Plot <-ggplot(CHD_traffic, aes(Month, Val)) +
+  geom_bar(stat = "identity", aes(fill = Var), position = "stack") +
+  xlab("Months") + ylab("Count") +
+  labs(title = "Children's Health Defense Traffic Sources",
+              subtitle = "(Paid category totaled 183 for the year and was too small to plot)") +
+  theme_bw() +
+  scale_y_continuous(labels = comma)
+
+t <-  CHD_traffic %>% 
+  group_by(Var) %>% 
+  summarise(Val = sum(Val))
+
+
+```
+
+
+```{r fig.width = 7, fig.height = 3, echo=FALSE, warning=FALSE, fig.cap = "Website Traffic Sources for Children's Health Defense Website"}
+CHD_Traffic_Plot
+```
+
+Children's Health Defense experienced significant growth to its website through both direct traffic sources and to a lesser degree social media sources. Search traffic appears to fluctuate somewhat but does not appear to have changed much overall. Referral traffic has also shown some growth.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+###GreenMedinfo Traffic Source Data
+
+#GreenMedinfo Traffic Source Data
+traffic$GM_Paid <- gsub("n/a", 0, traffic$GM_Paid)
+traffic$GM_Paid <- as.numeric(as.character(traffic$GM_Paid))
+
+
+#convert rows to columns and total by month and plot
+GM_traffic <- traffic %>% select(GM_Direct, GM_Referral, GM_Paid, GM_Social, GM_Search, Month) %>%
+  pivot_longer(., cols = c(GM_Direct,GM_Referral,GM_Paid,GM_Social,GM_Search),
+               names_to = "Var", values_to = "Val")
+
+GM_Traffic_Plot <-ggplot(GM_traffic, aes(Month, Val)) +
+  geom_bar(stat = "identity", aes(fill = Var), position = "stack") +
+  xlab("Months") + ylab("Count") +
+    labs(title = "GreenMedinfo Traffic Sources",
+              subtitle = "(Paid category totaled 11,623 for the year and was too small to plot)") +
+  theme_bw() +
+  scale_y_continuous(labels = comma)
+
+t <-  GM_traffic %>% 
+  group_by(Var) %>% 
+  summarise(Val = sum(Val))
+
+```
+
+```{r fig.width = 7, fig.height = 3, echo=FALSE, warning=FALSE, fig.cap = "Website Traffic Sources for Children's Health Defense Website"}
+GM_Traffic_Plot
+```
+
+Direct traffic to the GreenMedinfo website has grown throughout 2020 with the most growth in April and May. Traffic from social media has decreased somewhat and search traffic is much lower than in the beginning of 2020. 
+
+The following three visualizations are phrase clouds generated with the titles of the top 25 most visited pages for the three websites in December, 2020. These titles reflect the articles that had the most unique visits during the month. For all three articles, there is a mix of both health related articles along with mostly articles that represent common topics for Covid-19 misinformation.
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap = "Mercola Top Pages For December 2020"}
+###Mercola Top Pages for December 2020
+
+merc_dec_tp <- read.csv("Top_25_Pages_Merc.csv")
+merc_dec_tb<-table(merc_dec_tp$Page)
+Merc_Top25 <- wc_toppages(merc_dec_tb)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap = "Children's Health Defense Top Pages For December 2020"}
+###CHD Top Pages for December 2020
+
+CHD_dec_tp <- read.csv("Top_25_Pages_CHD.csv")
+CHD_dec_tb<-table(CHD_dec_tp$Page)
+CHD_Top25 <- wc_toppages(CHD_dec_tb)
+
+```
+
+```{r fig.width = 8, fig.height = 6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap = "GreenMedinfo Top Pages For December 2020"}
+###GM Top Pages for December 2020
+
+GM_dec_tp <- read.csv("Top_25_Pages_GM.csv")
+GM_dec_tb<-table(GM_dec_tp$Page)
+GM_Top25 <- wc_toppages(GM_dec_tb, "")
+
+```
+
+
+# Conclusions
+
+The material explored in this study is in many ways simply the tip of the iceberg. In fact, the depth and variety of communications found related to the three studied websites were considerably daunting. One mitigating factor, however, was the observation of how connected the major participants in this community are and how common threads are easily elicited from the material. It was also interesting to observe that Facebook's efforts to "shadow-ban" content is somewhat effective and yet there is still a great deal of active posting regarding common Covid-19 misinformation particularly surrounding vaccines to this day. Social media's efforts to crack down on individuals who share anti-vaxx material resulted in the preemptive avoidance of misinformation being spread by purveyors of misinformation as thy are either banned or move to other means of getting their message out.
+
+Social media companies have had a varied level of success in labeling, discouraging, and sometimes censoring posts created by those responsible for Covid-19 misinformation. Nonetheless, as evidenced by the data collected in this study, even when a social media user finds themselves having lost access to a platform, there are ample means of driving potential followers and readers to their website. Once an email capture is made, that recipient will be "fire-hosed" with health misinformation on a regular basis. Given the prevalence of vaccine hesitancy, adherence to Covid-19 myths, and a significant unwillingness to comply with public health initiatives pertaining to Covid-19 by a large portion of the public, it is likely that these sources of misinformation are meeting their goals of reaching the public, even when they are banished from social media.
+
+Several key approaches must be taken to address the problem of medical misinformation in the future. First, vigilance and knowledge of key players in various misinformation communities and a thorough knowledge of commonly held conspiracy theories at any given time are essential for preemptively and responsively sharing information in a way that contradicts and refutes harmful ideas that are shared in a variety of venues. While it may be tempting to fix responsibility on the most visible expressions (like social media) when it comes to addressing misinformation, it will be important in the future to be aware of the means in which those who misinform adapt and change their approach in order to evade detection.
+
+
+
+## **References**
+
+132 websites (and counting) are pushing coronavirus conspiracies, says NewsGuard Misinformation Monitor. (2020, March 27). Newsweek. https://www.newsweek.com/132-websites-are-pushing-coronavirus-conspiracy-theories-says-newsguard-misinformation-monitor-1494557
+Alexandra S. Levine. (2020, December 21). Misinformation about the vaccine could be worse than disinformation about the elections. POLITICO. https://www.politico.com/news/2020/12/21/social-media-vaccine-misinformation-449770
+Ball, P., & Maxmen, A. (2020). The epic battle against coronavirus misinformation and conspiracy theories. Nature, 581(7809), 371–374. https://doi.org/10.1038/d41586-020-01452-z
+Barrett, S. (2020a, July 18). COVID-19 Schemes, Scams, and Misinformation | Quackwatch. https://quackwatch.org/consumer-protection/covid-19-consumer-protection/
+Barrett, S. (2020b, July 27). Dr. Joseph Mercola Ordered to Stop Illegal Claims | Quackwatch. https://quackwatch.org/11ind/mercola/
+Burki, T. (2020). The online anti-vaccine movement in the age of COVID-19. The Lancet Digital Health, 2(10), e504–e505. https://doi.org/10.1016/S2589-7500(20)30227-2
+Center for Countering Digital Hate. (n.d.). CCDH. Retrieved March 23, 2021, from https://www.counterhate.com
+Coronavirus Misinformation Tracking Center. (n.d.). NewsGuard. Retrieved March 23, 2021, from https://www.newsguardtech.com/coronavirus-misinformation-tracking-center/
+Cowley, S. (2021, January 18). Vaccine Critics Received More Than $1 Million in Pandemic Relief Loans. The New York Times. https://www.nytimes.com/2021/01/18/business/anti-vaccine-ppp-loans.html
+Dr. Joseph Mercola—Posts | Facebook. (n.d.). Retrieved March 22, 2021, from https://www.facebook.com/doctor.health/posts/10157083814730590
+Facebook’s Algorithm: A Major Threat to Public Health. (2020, August 19). Avaaz. https://secure.avaaz.org/campaign/en/facebook_threat_health/
+Forget Facebook – Take Control of Your Privacy by Dr. Mercola. (n.d.). Mercola.Com. Retrieved March 22, 2021, from http://www.mercola.com/forget-facebook.htm
+Hollowood, E., Sorrato, R., & Newell, C. (n.d.). Who are the ‘super-spreaders’ of medical misinformation, and how do their hoaxes spread so quickly on social media? A graphic guide. Retrieved March 22, 2021, from https://www.theglobeandmail.com/world/article-medical-misinformation-superspreader-investigation/
+Iyengar, R. (2021, February 11). Robert F. Kennedy Jr. Has been banned from Instagram—CNN. CNN. https://www.cnn.com/2021/02/10/tech/robert-kennedy-jr-instagram-ban/index.html
+Jamison, A. M., Broniatowski, D. A., Dredze, M., Wood-Doughty, Z., Khan, D., & Quinn, S. C. (2020). Vaccine-related advertising in the Facebook Ad Archive. Vaccine, 38(3), 512–520. http://dx.doi.org/10.1016/j.vaccine.2019.10.066
+Jarry, J. (2019, July 11). Popular Health Guru Sayer Ji Curates the Scientific Literature with His Bachelor’s Degree in Philosophy. Office for Science and Society. https://www.mcgill.ca/oss/article/pseudoscience/popular-health-guru-sayer-ji-curates-scientific-literature-his-bachelors-degree-philosophy
+Ji, S. (2020a, July 8). Instagram Threatens to Delete Greenmedinfo’s Account for Posting THESE Covid-19 Related Posts. https://www.greenmedinfo.com/blog/instagram-threatens-delete-greenmedinfos-account-posting-covid-19-related-image2
+Ji, S. (2020b, September 2). Greenmedinfo Deleted from Instagram and Linkedin (Facebook Next?) Has The Great Social Media Purge of 2020 Begun? https://www.greenmedinfo.com/blog/greenmedinfo-deleted-instagram-and-linkedin-facebook-next-has-great-social-media-
+Ji, S. (2021, March 7). Twitter Deletes GreenMedInfo’s 13-Year-Old Account After Calling Out CCDH’s Digital Hit List. https://www.greenmedinfo.com/blog/twitter-deletes-greenmedinfos-13-year-old-account-after-calling-out-ccdhs-digital2
+lists of covid misinformation websites—Google Search. (n.d.). Retrieved March 23, 2021, from https://www.google.com/search?q=lists+of+covid+misinformation+websites&rlz=1C1CHBF_enUS773US773&sxsrf=ALeKk02Tx3cHNPZACGKkvZreYHahXdPeKw:1616543254081&ei=Fn5aYLTDBOSrwbkP5smQyAQ&start=30&sa=N&ved=2ahUKEwi0prHzzMfvAhXkVTABHeYkBEk4FBDw0wN6BAgEEEg&biw=1471&bih=762
+Mercola, J., & Cummings, R. (2021). The Truth About Covid-19: Exposing the Great Reset, Lockdowns, Vaccine Passports, and the New Normal. Chelsea Green Publishing.
+Mercola.com—#1 Natural Health Website. (n.d.). Mercola.Com. Retrieved March 22, 2021, from https://www.mercola.com/
+Mokhtari, H., & Mirzaei, A. (2020). The tsunami of misinformation on COVID-19 challenged the health information literacy of the general public and the readability of educational material: A commentary. Public Health, 187, 109–110. https://doi.org/10.1016/j.puhe.2020.08.011
+Mostrous, A. (2020, November 11). How a Kennedy became a ‘superspreader’ of hoaxes on COVID-19, vaccines, 5G and more. https://www.theglobeandmail.com/world/article-robert-f-kennedy-jr-medical-misinformation/
+National Vaccine Information Center—Your Health. Your Family. Your Choice. (n.d.). National Vaccine Information Center (NVIC). Retrieved March 22, 2021, from https://www.nvic.org/
+NewsGuard childrenshealthdefense.org Nutrition Label. (n.d.). NewsGuard. Retrieved March 22, 2021, from https://api.newsguardtech.com/label/childrenshealthdefense.org?cid=1a184c47-f65b-403a-af0b-824b5b5b9bbe
+NewsGuard greenmedinfo.com Nutrition Label. (n.d.). Retrieved March 23, 2021, from https://api.newsguardtech.com/label/greenmedinfo.com?cid=1a184c47-f65b-403a-af0b-824b5b5b9bbe
+NewsGuard mercola.com Nutrition Label. (n.d.). NewsGuard. Retrieved March 22, 2021, from https://api.newsguardtech.com/label/mercola.com?cid=1a184c47-f65b-403a-af0b-824b5b5b9bbe
+Nvic-fb-deplatforming-statement-2021.pdf. (n.d.). Retrieved March 22, 2021, from https://www.nvic.org/cmstemplates/nvic/Pdf/pressrelease/nvic-fb-deplatforming-statement-2021.pdf
+Satija, N., & Sun, L. H. (n.d.). A major funder of the anti-vaccine movement has made millions selling natural health products. Washington Post. Retrieved April 10, 2021, from https://www.washingtonpost.com/investigations/2019/10/15/fdc01078-c29c-11e9-b5e4-54aa56d5b7ce_story.html
+Sun, L. H. (2019, November 15). Majority of anti-vaccine ads on Facebook were funded by two groups. The Washington Post (Online); WP Company LLC d/b/a The Washington Post. http://search.proquest.com/docview/2314673862/citation/DCAC66FC89044F93PQ/1
+Super-spreaders. (2020, August 4). Tortoise. https://www.tortoisemedia.com/2020/08/04/rise-of-the-super-spreaders-infodemic/
+The Disinformation Dozen | Center for Countering Digital Hate. (n.d.). CCDH. Retrieved March 30, 2021, from https://www.counterhate.com/disinformationdozen
+The Truth About COVID-19 by Joseph Mercola | Chelsea Green Publishing. (n.d.). Retrieved March 22, 2021, from https://www.chelseagreen.com/product/the-truth-about-covid-19/
+Thompson, A., & Finnegan, G. (2020). United Nations Children’s Fund Vaccine Misinformation Management Field Guide. https://vaccinemisinformation.guide
+Tran, L. (2019, November 7). Firehosing: The systemic strategy that anti-vaxxers are using to spread misinformation | Lucky Tran. The Guardian. http://www.theguardian.com/commentisfree/2019/nov/07/firehosing-the-systemic-strategy-that-anti-vaxxers-are-using-to-spread-misinformation
+
